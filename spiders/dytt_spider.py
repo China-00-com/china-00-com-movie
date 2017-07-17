@@ -1,5 +1,6 @@
 # coding:utf-8
 import re
+from urlparse import urljoin
 import HTMLParser
 import requests
 import chardet
@@ -10,7 +11,7 @@ class DetailParserBase(object):
 
 
 class DyttDetailParser(DetailParserBase):
-    POSTER = re.compile(u'<img.*?src="(.*?)".*?◎')
+    POSTER = re.compile(ur'<div id="Zoom">.*?<img.*?src="(.*?)".*?◎',re.S)
     TRANSE_TITLE = re.compile(u'>◎译　　名(.*?)<')
     TITLE = re.compile(u'>◎片　　名(.*?)<')
     AGE = re.compile(u'>◎年　　代(.*?)<')
@@ -28,10 +29,11 @@ class DyttDetailParser(DetailParserBase):
     DURATION = re.compile(u'>◎片　　长(.*?)<')
     DIRECTOR = re.compile(u'>◎导　　演(.*?)<')
     ACTOR = re.compile(u'◎主　　演(.*?)◎')
-    INTRO = re.compile(u'◎简　　介(.*?)</p>')
+    INTRO = re.compile(ur'◎简　　介(.*?)【下载地址',re.S)
     DOWLOAD_URL = re.compile(u'')
     HTML_CLEAN = re.compile(u'<.*?>')
     SPLIT_TAG = "TACEY"
+    DOMAIN = "http://www.dytt8.net"
 
     @classmethod
     def __clean_html(cls, text, split_tag):
@@ -209,6 +211,7 @@ class DyttDetailParser(DetailParserBase):
     @classmethod
     def get_intro(cls, document):
         intro = cls.INTRO.findall(document)
+        print intro
         if not intro:
             return ""
         intro = intro[0].strip()
@@ -219,6 +222,7 @@ class DyttDetailParser(DetailParserBase):
         for text in intro_text:
             intro_content.append({"content": text, "type": "text"})
         for pic in intro_pics:
+            pic = urljoin(cls.DOMAIN,pic)
             intro_content.append({"content": pic, "type": "img"})
         return intro_content
 
@@ -260,6 +264,7 @@ def get_html(url):
 
 
 if __name__ == "__main__":
-    url = "http://www.dytt8.net/html/gndy/jddy/20170708/54460.html"
+    url = "http://www.dytt8.net/html/tv/hytv/20170715/54513.html"
     doc = get_html(url)
-    print DyttDetailParser.get_poster(doc)
+    print doc
+    print DyttDetailParser.get_intro(doc)
