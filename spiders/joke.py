@@ -1,21 +1,12 @@
 # coding: utf-8
 
-""" 段子解析
-
- 1. 内涵段子
- 2. 网易段子
- 3. 糗事百科
- 4. 嘻嘻哈哈
- 5. 捧腹网
- 6. 挖段子
-"""
+""" 段子解析"""
 
 from bs4 import BeautifulSoup
 
 from spiders.models import JokeFields
 from spiders.parsers.utils import get_tag_attribute, get_tag_attribute_int
 from spiders.utilities import http, format_datetime_string
-
 
 
 def joke_neihan_parser(url):

@@ -1,4 +1,7 @@
 # coding:utf-8
+
+"""磁力链接实时"""
+
 import re
 import requests
 from w3lib.encoding import html_to_unicode
@@ -157,7 +160,6 @@ if __name__ == "__main__":
     document = requests.get("http://www.btwhat.net/search/%E6%88%98%E7%8B%BC2/1-2.html").content
     lp = ListParser()
     lp.run(document)
-
 
 """
 btbook

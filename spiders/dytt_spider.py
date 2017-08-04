@@ -1,4 +1,7 @@
 # coding:utf-8
+
+"""电影天堂资源解析"""
+
 import re
 from urlparse import urljoin
 import HTMLParser
@@ -306,7 +309,6 @@ class DyttListParser(ListParserBase):
     PAGE_NUMS = re.compile(ur"(\d+).html'>末页", re.S)
     URL_BASE = "http://www.dytt8.net"
 
-
     @classmethod
     def get_page_num(cls, document):
         print document
@@ -390,7 +392,7 @@ def get_html(url):
 if __name__ == "__main__":
     url = "http://www.dytt8.net/html/gndy/jddy/index.html"
     doc = get_html(url)
-    pages = DyttListParser.get_pages(start=1,end=20)
+    pages = DyttListParser.get_pages(start=1, end=20)
     print pages
     page_nums = DyttListParser.get_page_num(doc)
     items = DyttListParser.get_items(doc)

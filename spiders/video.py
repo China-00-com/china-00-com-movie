@@ -1,14 +1,6 @@
 # coding: utf-8
 
-""" 短视频相关解析
-
- 1. 美拍
- 2. 快手
- 3. zaker
- 4. 微博
- 5. 澎湃新闻
- 6. 汽车之家
-"""
+""" 短视频相关解析"""
 
 import json
 from time import sleep

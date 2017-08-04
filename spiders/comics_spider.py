@@ -1,10 +1,11 @@
 # coding:utf-8
 
-
+"""邪恶漫画解析"""
 
 # coding:utf-8
 from urllib import quote
 from pymongo import MongoClient
+
 NEW_USER = "username"
 NEW_PASSWORD = quote("password")
 NEW_HOST_PORT = "ip:port"
@@ -24,12 +25,15 @@ import uuid
 import oss2
 from datetime import datetime
 from bs4 import Tag, BeautifulSoup
+
 access_key_id = ""
 access_key_secret = ""
 auth = oss2.Auth(access_key_id, access_key_secret)
 region = "oss-url"
 name = "group-name"
 bucket = oss2.Bucket(auth, region, name)
+
+
 def upload_file_to_oss(data):
     """上传图片到oss"""
     target_name = str(uuid.uuid1().hex) + ".jpg"
@@ -44,8 +48,11 @@ def upload_file_to_oss(data):
         return False
     pic_url = '///' + target_name
     return pic_url
+
+
 class ExtractTool(object):
     base_conf = {"attribute": "text", "params": {"selector": "COMMIC-SPIDER"}, "method": "select"}
+
     @staticmethod
     def find_tag(root, param):
         if not isinstance(root, (Tag, BeautifulSoup)):
@@ -63,6 +70,7 @@ class ExtractTool(object):
         else:
             raise ValueError("param['method'] only support find, find_all and select")
         return tags[nth] if len(tags) > nth else None
+
     @staticmethod
     def find_tags(root, param):
         if not isinstance(root, (Tag, BeautifulSoup)):
@@ -82,6 +90,7 @@ class ExtractTool(object):
         else:
             raise ValueError("param['method'] only support find, find_all and select")
         return tags
+
     @staticmethod
     def extract_tag_attribute(root, name="text"):
         if root is None:
@@ -95,12 +104,15 @@ class ExtractTool(object):
                 return ",".join(value)
             else:
                 return value.strip()
+
     @classmethod
-    def find_extract_tag_attribute(cls,tag, params):
+    def find_extract_tag_attribute(cls, tag, params):
         if params.get("params"):
             tag = cls.find_tag(tag, params)
         attribute = params.get("attribute", "text")
         return cls.extract_tag_attribute(tag, attribute)
+
+
 def format_time(t=None):
     f = "%Y-%m-%d %H:%M:%S"
     if t is None:
@@ -111,6 +123,7 @@ def format_time(t=None):
         result = datetime.utcnow()
     return result
 
+
 import json
 import re
 import logging
@@ -120,6 +133,8 @@ from pymongo.errors import DuplicateKeyError
 from bson.objectid import ObjectId
 from bs4 import Tag, BeautifulSoup
 from urlparse import urljoin
+
+
 class Chapter(object):
     def __init__(self):
         self.title = ""
@@ -127,6 +142,8 @@ class Chapter(object):
         self.pic_nums = 0
         self.pics = []
         self.ori_url = ""
+
+
 class Book(object):
     def __init__(self):
         self.name = ""
@@ -136,6 +153,8 @@ class Book(object):
         self.chap_nums = 0
         self.chapters = []
         self.ori_url = ""
+
+
 class SpiderBase(object):
     headers = {
         "user-agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
@@ -157,6 +176,7 @@ class SpiderBase(object):
     detail_conf = {
         "pic": ExtractTool.base_conf
     }
+
     @classmethod
     def download(cls, url, c_json=False, skip=None, headers=None):
         if headers is None:
@@ -174,6 +194,7 @@ class SpiderBase(object):
                 html_body_str=content
             )
             return content.encode("utf-8")
+
     @classmethod
     def download_pic(cls, url, headers=None):
         count = 0
@@ -188,6 +209,7 @@ class SpiderBase(object):
             else:
                 flag = True
         return content
+
     @classmethod
     def get_book_info(cls, book_url):
         book = Book()
@@ -202,9 +224,11 @@ class SpiderBase(object):
             return book
         else:
             raise Exception("BOOK-INFO:未能正常解析")
+
     @classmethod
     def gen_pages_url(cls, book_url):
         return [book_url]
+
     @classmethod
     def get_chap_list(cls, book_url):
         """
@@ -228,6 +252,7 @@ class SpiderBase(object):
                 chaps.append(chap)
         chaps.reverse()
         return chaps
+
     @classmethod
     def get_chap_detail(cls, chap_url):
         """
@@ -245,6 +270,7 @@ class SpiderBase(object):
             pic = urljoin(chap_url, pic)
             pics.append(pic)
         return pics
+
     @classmethod
     def obj_to_doc(cls, obj):
         doc = dict()
@@ -265,6 +291,7 @@ class SpiderBase(object):
             doc["chapters"].append(chap)
         doc["update_time"] = format_time()
         return doc
+
     @classmethod
     def store(cls, book):
         book_doc = cls.obj_to_doc(book)
@@ -274,6 +301,7 @@ class SpiderBase(object):
             pass
         except Exception as e:
             logging.warning(e)
+
     @classmethod
     def show(cls, book):
         print "name:", book.name
@@ -284,12 +312,15 @@ class SpiderBase(object):
             print num, chap.title, chap.cover_pic
             for pic in chap.pics:
                 print pic
+
     @classmethod
     def process_pic(cls, book):
         raise NotImplemented
+
     @classmethod
     def special(cls, book):
         return book
+
     @classmethod
     def run(cls, book_url):
         book = cls.get_book_info(book_url)
@@ -305,6 +336,8 @@ class SpiderBase(object):
         book = cls.special(book)
         cls.store(book)
         cls.show(book)
+
+
 class PapabaSpider_V1(SpiderBase):
     PB_SITE = u"福利啪啪吧"
     book_info_conf = {
@@ -321,6 +354,7 @@ class PapabaSpider_V1(SpiderBase):
     detail_conf = {
         "pic": {"params": {"selector": "li#imgshow"}, "method": "select"},
     }
+
     @classmethod
     def gen_pages_url(cls, book_url):
         url = book_url + "list_%s_%s.html"
@@ -341,6 +375,8 @@ class PapabaSpider_V1(SpiderBase):
                 pages_url.append(url % (num, page + 1))
         print pages_url
         return pages_url
+
+
 class PapabaSpider_V2(PapabaSpider_V1):
     chap_list_conf = {
         "title": {"attribute": "title", "params": {"selector": "a"}, "method": "select"},
@@ -348,6 +384,8 @@ class PapabaSpider_V2(PapabaSpider_V1):
         "url": {"attribute": "href", "params": {"selector": "a"}, "method": "select"},
         "list": {"params": {"selector": "div#jishu > div.item"}, "method": "select"}
     }
+
+
 class xmchkjSpider(SpiderBase):
     PB_SITE = u"酷乐吧"
     chap_list_conf = {
@@ -359,6 +397,8 @@ class xmchkjSpider(SpiderBase):
     detail_conf = {
         "pic": {"params": {"selector": "div.comic_pic_box"}, "method": "select"},
     }
+
+
 class Cuntuba520Spider(SpiderBase):
     PB_SITE = u"寸土吧"
     chap_list_conf = {
@@ -370,6 +410,8 @@ class Cuntuba520Spider(SpiderBase):
     detail_conf = {
         "pic": {"params": {"selector": "div.comic_pic_box"}, "method": "select"},
     }
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s",
