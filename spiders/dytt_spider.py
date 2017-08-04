@@ -4,14 +4,79 @@ from urlparse import urljoin
 import HTMLParser
 import requests
 import chardet
+from w3lib.encoding import html_to_unicode
+from bs4 import Tag, BeautifulSoup
+
+
+def find_tag(root, param):
+    if not isinstance(root, (Tag, BeautifulSoup)):
+        return None
+    method = param.get("method", "find")
+    params = param["params"]
+    nth = param.get("nth", 0)
+    if method == "find":
+        tag = root.find(**params)
+        return tag
+    elif method == "find_all":
+        tags = root.find_all(**params)
+    elif method == "select":
+        tags = root.select(**params)
+    else:
+        raise ValueError("param['method'] only support find, find_all and select")
+    return tags[nth] if len(tags) > nth else None
+
+
+def find_tags(root, param):
+    if not isinstance(root, (Tag, BeautifulSoup)):
+        return []
+    method = param.get("method", "find_all")
+    params = param["params"]
+    if method == "find":
+        tag = root.find(**params)
+        if tag is None:
+            return []
+        else:
+            return [tag]
+    elif method == "find_all":
+        tags = root.find_all(**params)
+    elif method == "select":
+        tags = root.select(**params)
+    else:
+        raise ValueError("param['method'] only support find, find_all and select")
+    return tags
+
+
+def extract_tag_attribute(root, name="text"):
+    if root is None:
+        return ""
+    assert isinstance(root, (Tag, BeautifulSoup))
+    if name == "text":
+        return root.get_text().strip()
+    else:
+        value = root.get(name, "")
+        if isinstance(value, (list, tuple)):
+            return ",".join(value)
+        else:
+            return value.strip()
+
+
+def find_extract_tag_attribute(tag, params):
+    if params.get("params"):
+        tag = find_tag(tag, params)
+    attribute = params.get("attribute", "text")
+    return extract_tag_attribute(tag, attribute)
 
 
 class DetailParserBase(object):
     pass
 
 
+class ListParserBase(object):
+    pass
+
+
 class DyttDetailParser(DetailParserBase):
-    POSTER = re.compile(ur'<div id="Zoom">.*?<img.*?src="(.*?)".*?◎',re.S)
+    POSTER = re.compile(ur'<div id="Zoom">.*?<img.*?src="(.*?)".*?◎', re.S)
     TRANSE_TITLE = re.compile(u'>◎译　　名(.*?)<')
     TITLE = re.compile(u'>◎片　　名(.*?)<')
     AGE = re.compile(u'>◎年　　代(.*?)<')
@@ -29,7 +94,7 @@ class DyttDetailParser(DetailParserBase):
     DURATION = re.compile(u'>◎片　　长(.*?)<')
     DIRECTOR = re.compile(u'>◎导　　演(.*?)<')
     ACTOR = re.compile(u'◎主　　演(.*?)◎')
-    INTRO = re.compile(ur'◎简　　介(.*?)【下载地址',re.S)
+    INTRO = re.compile(ur'◎简　　介(.*?)【下载地址', re.S)
     DOWLOAD_URL = re.compile(u'')
     HTML_CLEAN = re.compile(u'<.*?>')
     SPLIT_TAG = "TACEY"
@@ -222,29 +287,88 @@ class DyttDetailParser(DetailParserBase):
         for text in intro_text:
             intro_content.append({"content": text, "type": "text"})
         for pic in intro_pics:
-            pic = urljoin(cls.DOMAIN,pic)
+            pic = urljoin(cls.DOMAIN, pic)
             intro_content.append({"content": pic, "type": "img"})
         return intro_content
 
     @classmethod
-    def get_poster(cls,document):
+    def get_poster(cls, document):
         poster = cls.POSTER.findall(document)
         if not poster:
             return []
         return poster
 
 
+class DyttListParser(ListParserBase):
+    PUBLISH_TIME = re.compile(ur'>日期：(.*?)点击', re.S)
+    TITLE = {"params": {"selector": "a.ulink"}, "method": "select"}
+    LINK_UNJOIN = {"attribute": "href", "params": {"selector": "a.ulink"}, "method": "select"}
+    PAGE_NUMS = re.compile(ur"(\d+).html'>末页", re.S)
+    URL_BASE = "http://www.dytt8.net"
+
+
+    @classmethod
+    def get_page_num(cls, document):
+        print document
+        result = cls.PAGE_NUMS.findall(document)
+        if result:
+            page_nums = int(result[0])
+        else:
+            page_nums = 1
+        return page_nums
+
+    @classmethod
+    def get_pages(cls, start=0, end=0):
+        pages = list()
+        template = urljoin(cls.URL_BASE, "html/gndy/jddy/list_63_{}.html")
+        for page in range(start, end + 1):
+            url = template.format(page)
+            pages.append(url)
+        return pages
+
+    @classmethod
+    def get_publish_time(cls, soup):
+        content = str(soup)
+        result = cls.PUBLISH_TIME.findall(content)
+        if result:
+            pb_time = result[0].strip()
+        else:
+            pb_time = ""
+        return pb_time
+
+    @classmethod
+    def get_title(cls, soup):
+        title = find_extract_tag_attribute(soup, cls.TITLE)
+        return title
+
+    @classmethod
+    def get_link_unjoin(cls, soup):
+        link_unjoin = find_extract_tag_attribute(soup, cls.LINK_UNJOIN)
+        return link_unjoin
+
+    @classmethod
+    def get_lin_join(cls, soup):
+        link_unjoin = cls.get_link_unjoin(soup)
+        link_join = urljoin(cls.URL_BASE, link_unjoin)
+        return link_join
+
+    @classmethod
+    def get_items(cls, document):
+        soup = BeautifulSoup(document, "lxml")
+        tags = soup.select(selector="div.co_content8 > ul  table.tbspan")
+        return tags
+
 
 def transe2unicode(text):
     if isinstance(text, str):
         check_result = chardet.detect(text)
         encode = check_result["encoding"]
-        if 'GB' in encode:
-            return text.decode("gbk")
-        elif "8" in encode:
-            return text.decode("utf-8")
-        else:
-            return text
+        print encode
+        if 'GB' in encode or "ISO-8859-2" in encode:
+            text = text.decode("gbk", 'ignore')
+        elif "UTF" in encode.lower():
+            text = text.decode("utf-8", 'ignore')
+        return text
     elif isinstance(text, unicode):
         return text
 
@@ -264,7 +388,12 @@ def get_html(url):
 
 
 if __name__ == "__main__":
-    url = "http://www.dytt8.net/html/tv/hytv/20170715/54513.html"
+    url = "http://www.dytt8.net/html/gndy/jddy/index.html"
     doc = get_html(url)
-    print doc
-    print DyttDetailParser.get_intro(doc)
+    pages = DyttListParser.get_pages(start=1,end=20)
+    print pages
+    page_nums = DyttListParser.get_page_num(doc)
+    items = DyttListParser.get_items(doc)
+    for item in items:
+        print DyttListParser.get_title(item)
+        print "*" * 100
