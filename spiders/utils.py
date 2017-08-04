@@ -243,8 +243,13 @@ def clean_date_time(string):
     return date_time_string
 
 
+def transelate(text, f="en", to="cn"):
+    return text
+
+
 if __name__ == "__main__":
-    url = DownConverter.thunder_decode("thunder://QUFmdHA6Ly93OndAZDMuZGwxMjM0LmNvbTo0NTY3L1slRTclOTQlQjUlRTUlQkQlQjElRTUlQTQlQTklRTUlQTAlODJ3d3cuZHkyMDE4LmNvbV0lRTYlQUQlQTMlRTQlQjklODklRTglODElOTQlRTclOUIlOUYlRTUlQTQlQTclRTYlODglOTglRTUlQjAlOTElRTUlQjklQjQlRTYlQjMlQjAlRTUlOUQlQTZCRCVFNCVCOCVBRCVFOCU4QiVCMSVFNSU4RiU4QyVFNSVBRCU5Ny5ybXZiWlo=")
+    url = DownConverter.thunder_decode(
+        "thunder://QUFmdHA6Ly93OndAZDMuZGwxMjM0LmNvbTo0NTY3L1slRTclOTQlQjUlRTUlQkQlQjElRTUlQTQlQTklRTUlQTAlODJ3d3cuZHkyMDE4LmNvbV0lRTYlQUQlQTMlRTQlQjklODklRTglODElOTQlRTclOUIlOUYlRTUlQTQlQTclRTYlODglOTglRTUlQjAlOTElRTUlQjklQjQlRTYlQjMlQjAlRTUlOUQlQTZCRCVFNCVCOCVBRCVFOCU4QiVCMSVFNSU4RiU4QyVFNSVBRCU5Ny5ybXZiWlo=")
 
     from urllib import unquote
 
