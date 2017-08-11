@@ -391,6 +391,7 @@ def get_html(url):
 
 if __name__ == "__main__":
     url = "http://www.dytt8.net/html/gndy/jddy/index.html"
+    #http://www.piaohua.com/html/dongzuo/2017/0805/32219.html
     doc = get_html(url)
     pages = DyttListParser.get_pages(start=1, end=20)
     print pages
