@@ -9,7 +9,7 @@ import requests
 import chardet
 from w3lib.encoding import html_to_unicode
 from bs4 import Tag, BeautifulSoup
-
+from utils import DownConverter
 
 def find_tag(root, param):
     if not isinstance(root, (Tag, BeautifulSoup)):
@@ -68,6 +68,134 @@ def find_extract_tag_attribute(tag, params):
         tag = find_tag(tag, params)
     attribute = params.get("attribute", "text")
     return extract_tag_attribute(tag, attribute)
+
+
+class Item(object):
+    def to_dict(self):
+        return dict(self.__dict__)
+
+    @classmethod
+    def from_dict(cls, d):
+        self = cls()
+        for k, v in d.items():
+            self.__dict__[k] = v
+
+    def show(self):
+        for k, v in self.to_dict().items():
+            print k, ":", v
+        print "*" * 100
+
+
+class MovieItem(Item):
+    def __init__(self):
+        self.poster = ""
+        self.transe_name = ""
+        self.name = ""
+        self.title = ""
+        self.age = ""
+        self.release = ""
+        self.product_ori = ""
+        self.cate = list()
+        self.language = ""
+        self.subtitle = list()
+        self.imdb = {
+            "score": 0,
+            "link": ""
+        }
+        self.douban = {
+            "score": 0,
+            "link": ""
+        }
+        self.episodes = 1
+        self.format = ""
+        self.size = ""
+        self.cd_num = 1
+        self.duration = 0
+        self.director = list()
+        self.actor = list()
+        self.intro = ""
+        self.download = {
+            "thunder_url": "",
+            "bt_url": "",
+            "magnet": ""
+        }
+
+
+class PiaohuaDetailParser(object):
+    TITLE = re.compile('<h3>(.*?)</h3>')
+    NAME = re.compile('◎片　　名(.*?)<')
+    TRANSE_NAME = re.compile('◎译　　名(.*?)<')
+    AGE = re.compile('◎年　　代(.*?)<')
+    PRODUCT_ORI = re.compile('◎产　　地(.*?)<')
+    RELEASE = re.compile('◎上映日期(.*?)<')
+    CATE = re.compile('◎类　　别(.*?)<')
+    LANGUAGE = re.compile('◎语　　言(.*?)<')
+    DIRECTOR = re.compile('◎导　　演(.*?)<')
+    ACTOR = re.compile('◎主　　演(.*?)◎', re.S)
+    DOWNLOAD = re.compile('<a href="(.*?)">ftp')
+    POSTER = re.compile('<img alt="" src="(.*?)" style="width: 453px; height: 634px;"')
+
+    @classmethod
+    def get_poster(cls,document):
+        poster = cls.POSTER.findall(document)[0]
+        return poster
+
+    @classmethod
+    def get_download(cls, document):
+        thunder = cls.DOWNLOAD.findall(document)[0]
+        thunder = thunder.encode("utf-8")
+        thunder = DownConverter.thunder_encode(thunder)
+        return thunder
+
+    @classmethod
+    def get_actor(cls, document):
+        actor = cls.ACTOR.findall(document)[0]
+        return actor
+
+    @classmethod
+    def get_language(cls, document):
+        language = cls.LANGUAGE.findall(document)[0]
+        language = language.strip()
+        return language
+
+    @classmethod
+    def get_title(cls, document):
+        title = cls.TITLE.findall(document)[0]
+        return title
+
+    @classmethod
+    def get_name(cls, document):
+        name = cls.NAME.findall(document)[0].strip()
+        return name
+
+    @classmethod
+    def get_transe_name(cls, document):
+        transe_name = cls.TRANSE_NAME.findall(document)[0]
+        transe_name = transe_name.strip()
+        transe_name = transe_name.split("/")
+        return transe_name
+
+    @classmethod
+    def get_age(cls, document):
+        age = cls.AGE.findall(document)[0].strip()
+        return age
+
+    @classmethod
+    def get_product_ori(cls, document):
+        produc_ori = cls.PRODUCT_ORI.findall(document)[0]
+        produc_ori = produc_ori.strip()
+        return produc_ori
+
+    @classmethod
+    def get_cate(cls, document):
+        cate = cls.CATE.findall(document)[0]
+        cate = cate.strip().split("/")
+        return cate
+
+    @classmethod
+    def get_release(cls, document):
+        release = cls.RELEASE.findall(document)[0].strip()
+        return release
 
 
 class DetailParserBase(object):
@@ -368,7 +496,8 @@ def transe2unicode(text):
         print encode
         if 'GB' in encode or "ISO-8859-2" in encode:
             text = text.decode("gbk", 'ignore')
-        elif "UTF" in encode.lower():
+        elif "utf" in encode.lower():
+            print
             text = text.decode("utf-8", 'ignore')
         return text
     elif isinstance(text, unicode):
@@ -385,18 +514,15 @@ def get_html(url):
     resp = requests.get(url, headers={"user-agent": ua})
     content = resp.content
     content = transe2unicode(content)
-    content = unescape(content)
+    try:
+        content = unescape(content)
+    except:
+        pass
     return content
 
 
 if __name__ == "__main__":
-    url = "http://www.dytt8.net/html/gndy/jddy/index.html"
-    #http://www.piaohua.com/html/dongzuo/2017/0805/32219.html
+    #http://www.btbtt.co/
+    url = "http://www.piaohua.com/html/aiqing/2017/0810/32230.html"
     doc = get_html(url)
-    pages = DyttListParser.get_pages(start=1, end=20)
-    print pages
-    page_nums = DyttListParser.get_page_num(doc)
-    items = DyttListParser.get_items(doc)
-    for item in items:
-        print DyttListParser.get_title(item)
-        print "*" * 100
+    print PiaohuaDetailParser.get_poster(doc)
